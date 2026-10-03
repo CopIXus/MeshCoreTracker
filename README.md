@@ -57,12 +57,12 @@ Motion uses speed and displacement, with a hold so a stop at a light does not im
 ```mermaid
 stateDiagram-v2
   [*] --> Seek
-  Seek --> Stationary: first valid fix, send now
-  Seek --> Moving: first fix already moving, send now
-  Stationary --> Moving: speed or 20 m displacement, send now
-  Moving --> Stationary: still for the hold time, send now
-  Moving --> Moving: about every 15 s
-  Stationary --> Stationary: about every 300 s
+  Seek --> Stationary: first valid fix sends now
+  Seek --> Moving: first fix already moving sends now
+  Stationary --> Moving: speed or displacement sends now
+  Moving --> Stationary: hold time elapsed sends now
+  Moving --> Moving: moving interval
+  Stationary --> Stationary: stationary interval
 ```
 
 Defaults are 15 seconds while moving and 300 seconds while stopped. Both are settings, not a reflash. Stale time sent in the message is twice the current interval. Five seconds remains available for one or two assets. Application acknowledgements are off unless an operator turns them on, because an ack is another flood.
