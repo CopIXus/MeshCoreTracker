@@ -46,8 +46,8 @@ Seed role keys the gateway already maps: `k9`, `veh`, `per`, `fw`, `ems`, `cmd`.
 
 - `u` comes from the public key via `trackerIdFromPublicKey()`. It does not change when the operator renames the radio.
 - The TAK uid is `meshtracker-` plus `u`. The gateway applies that. The radio does not send the `meshtracker-` prefix.
-- Callsign is the MeshCore node name, set with the normal companion app.
-- `k` comes from the `role` setting (`trackerDefaults().role`, custom var `trk.role` when the companion interface is wired). Store it lowercase.
+- Callsign is the MeshCore node name. On the T-Beam tracker build, set it with the USB console `name` command so it is kept across reboot. The MeshCore Android app can also set that name.
+- `k` comes from the `role` setting. On the T-Beam tracker build, set it with the USB console `role` command (`k9`, `veh`, `per`, `fw`, `ems`, `cmd`). The MeshCore Android app has no role field. Store the role lowercase. Custom var `trk.role` applies only when a port wires `CMD_SET_CUSTOM_VAR` to it. The T-Beam tracker build does not.
 - Group text is not signed. Anyone who has the channel key can claim any name or `u`. The private channel is the trust boundary. Do not put the channel key inside the tracker message.
 
 ## Behavior that must stay the same
