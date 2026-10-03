@@ -52,12 +52,14 @@ K9-REX: !MT1;u=A1B2C3D4;k=k9;la=36.123456;ln=-82.123456;s=1.2;c=90;a=512;st=30;q
 
 ## Set up a radio
 
-You do not type the tracker message. After the radio has a GPS fix, the firmware writes `!MT1` and sends it on one private channel. You set three things, and those three things are what show up in the message:
+You do not type the tracker message. After the radio has a GPS fix, the firmware writes `!MT1` and sends it on one private channel. These settings are what show up in that message:
 
 | Setting | What it becomes | Where to set it |
 |---|---|---|
-| Callsign | The name in front of the message: `HamptonFire_Halava352_F150: !MT1;...` | USB `name`, or the device name in the MeshCore Android app |
-| Role | The `k=` field, such as `k=fw` | USB `role` only |
+| Callsign | The name in front of the message: `Unit-1: !MT1;...` | USB `name`, or the device name in the MeshCore Android app |
+| Role | The `k=` field, such as `k=fw` | USB `role` |
+| How often | Seconds between fixes while moving, and while stopped | USB `move` and `still` |
+| Stale | How long the marker stays fresh, the `st=` field | USB `stale` |
 | Channel | Which private channel carries the fix | USB `channel`, or the channel list in the MeshCore Android app |
 
 The role is not a color. MeshcoreToTAK paints the marker. These are the roles the gateway already knows:
@@ -83,7 +85,7 @@ The app can set:
 - **Channels.** Add the same private channel, with the same key, that the gateway listens on. The tracker sends on slot 1 unless you point it somewhere else.
 - **Radio preset.** It has to match the mesh. The US preset used with this gateway is 910.525 MHz, bandwidth 62.5, spreading factor 7, coding rate 5.
 
-The app cannot set the role. There is no role field, and the custom sensor settings are not the tracker role. The app also cannot edit the `!MT1` text.
+The app cannot set the role, how often a fix is sent, or how long the marker stays fresh. There is no command in the Android app for those. The custom sensor settings are not the tracker role. The app also cannot edit the `!MT1` text. Use the USB console below.
 
 On a radio whose storage is already full, a name entered in the app can apply until the next reboot and then come back as the short public-key name. The USB `name` command is the one this firmware keeps. Channel keys entered in the app are kept, because they update the channel file the radio already has.
 
@@ -94,23 +96,28 @@ Leave advert location sharing off. The live fix goes out as `!MT1`. It does not 
 Connect the radio with a USB cable. Open a serial terminal at **115200** baud. This is the setup that does not depend on the phone app:
 
 ```text
-name HamptonFire_Halava352_F150
+name Unit-1
 role fw
+move 15
+still 300
+stale 30
 status
 ```
 
-`status` prints the callsign, the role, the radio preset, and which channel slot will carry the fix. A callsign much longer than 12 characters still works, as long as `CALLSIGN: ` plus the fix stays inside MeshCore's 160-character group text.
+`role` is one of `k9`, `veh`, `per`, `fw`, `ems`, or `cmd`. `move` is how often to send while the tracker is moving. `still` is how often to send while it is stopped. Both are 5 to 3600 seconds. Defaults are 15 and 300. The first fix, and a change from moving to stopped or back, still sends immediately.
+
+`stale` is the minimum number of seconds the TAK marker stays fresh. The radio also keeps the marker fresh for twice the current send interval when that is longer. With the defaults, a moving tracker is fresh for 30 seconds and a stopped one is fresh for 600 seconds. `stale 120` keeps a moving tracker fresh for at least 2 minutes. Values are 5 to 3600 seconds.
+
+`status` prints the callsign, the role, both send intervals, the fresh time for each, the radio preset, and which channel slot will carry the fix. A callsign much longer than 12 characters still works, as long as `CALLSIGN: ` plus the fix stays inside MeshCore's 160-character group text.
 
 If the private channel is not on the radio yet, add it. The key is the same value pasted into the gateway. It is 32 or 64 hex characters, or base64. A `#hashtag` name with no key uses the MeshCore hashtag channel.
 
 ```text
-channel 1 TNTAK 00112233445566778899aabbccddeeff
+channel 1 Track 00112233445566778899aabbccddeeff
 track 1
 ```
 
 `track` only selects a slot that already has a key. Slot 1 is the default.
-
-Other roles are the same command: `role k9`, `role veh`, `role per`, `role ems`, `role cmd`.
 
 ### Check it on the radio
 
@@ -119,10 +126,10 @@ Press the user button until the screen says **Tracker**. That page shows the rol
 A sent line on the USB console looks like this:
 
 ```text
-sent slot 1 HamptonFire_Halava352_F150: !MT1;u=356B093E;k=fw;la=36.295065;ln=-82.199457;a=589;st=600;q=1791057685;b=94
+sent slot 1 Unit-1: !MT1;u=A1B2C3D4;k=fw;la=36.123456;ln=-82.123456;a=512;st=600;q=1042;b=87
 ```
 
-`k=fw` is the whole style instruction. The gateway turns that into the red fire marker. Reboot the radio once and run `status` again. The callsign and role should be unchanged.
+`k=fw` is the whole style instruction. The gateway turns that into the red fire marker. `st` is the fresh time. Reboot the radio once and run `status` again. The callsign, role, intervals, and stale time should be unchanged.
 
 ### On the gateway
 
