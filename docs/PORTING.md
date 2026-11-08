@@ -58,8 +58,9 @@ Use `TrackerMotion` and `trackerDefaults()`. Do not copy the state machine into 
 - One private channel. Do not open a channel per asset.
 - First valid fix sends immediately.
 - Moving interval default 15 s. Stationary interval default 300 s. Both are configurable. 5 s is allowed for one or two assets, not the default.
-- Enter MOVING on a displacement of at least 20 m immediately, or after 2 consecutive speed samples at or above 1.5 m/s. One noisy speed spike must not flip the state.
-- Leave MOVING only after speed stays under the threshold and displacement stays under 20 m for the stationary hold (default 30 s). A stop at a light stays MOVING.
+- Enter MOVING after 2 consecutive speed samples at or above 1.5 m/s. One noisy speed spike must not flip the state. A receiver that reports low speed stays on the stationary interval even if the position wanders. A position shift of at least four times the move distance (default 80 m), held for `disp_samples` (default 5), sends one update and stays stationary.
+- With no speed from the receiver, enter MOVING only after the move distance (default 20 m) holds for `disp_samples` consecutive fixes. One jumped fix must not start the fast schedule.
+- Leave MOVING only after speed stays under the threshold for the stationary hold (default 30 s). A stop at a light stays MOVING.
 - On the transition into MOVING or STATIONARY, send immediately.
 - `st` is `max(interval * 2, stale_min)`. Defaults make 15 s -> 30 s and 300 s -> 600 s.
 - `q` increases by one per accepted send. The gateway drops duplicates and older sequences using unsigned 32-bit compare. Initialize `q` from GPS or RTC epoch seconds at boot so a reboot is not treated as a replay of an old low number.

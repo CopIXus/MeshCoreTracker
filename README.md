@@ -108,7 +108,16 @@ status
 
 `stale` is the minimum number of seconds the TAK marker stays fresh. The radio also keeps the marker fresh for twice the current send interval when that is longer. With the defaults, a moving tracker is fresh for 30 seconds and a stopped one is fresh for 600 seconds. `stale 120` keeps a moving tracker fresh for at least 2 minutes. Values are 5 to 3600 seconds.
 
-`status` prints the callsign, the role, both send intervals, the fresh time for each, the radio preset, and which channel slot will carry the fix. A callsign much longer than 12 characters still works, as long as `CALLSIGN: ` plus the fix stays inside MeshCore's 160-character group text.
+`status` prints the callsign, the role, both send intervals, the fresh time for each, the radio preset, which channel slot will carry the fix, and the flood scope. It also prints fixes sent, radio transmissions, repeater echoes, and other flood traffic heard with hops. `status log` prints the trip buffer: GPS fix lost and acquired, each send, each echo, GPS baud changes, battery millivolts, and scope changes. A callsign much longer than 12 characters still works, as long as `CALLSIGN: ` plus the fix stays inside MeshCore's 160-character group text.
+
+Leave the flood scope off unless every repeater between the tracker and the gateway has that region and allows flood on it. A stock repeater has no regions and drops a scoped flood at the first hop. An unscoped flood is forwarded. Region names are case-sensitive. They are not the channel key.
+
+```text
+scope off
+status
+```
+
+`status` must print `scope none`. `scope SomeRegion` sets one, keeping the capitals you type. `scope off` clears it. A name starting with `$` is rejected. When a repeater carries a fix, the console prints `echo 1 hop` (or more). The Tracker screen shows `NO FIX` and a minute count when the GPS has been dark for at least a minute. GPS is turned back on if a button long-press or the phone app switches it off.
 
 If the private channel is not on the radio yet, add it. The key is the same value pasted into the gateway. It is 32 or 64 hex characters, or base64. A `#hashtag` name with no key uses the MeshCore hashtag channel.
 
@@ -137,14 +146,14 @@ In MeshcoreToTAK, turn tracker parsing on for that same private channel. Parsing
 
 ## Reporting
 
-Motion uses speed and displacement, with a hold so a stop at a light does not immediately look parked. The first valid fix is sent immediately. Later fixes follow the interval. Tracker text is not TAK chat.
+Motion uses GPS speed, with a hold so a stop at a light does not immediately look parked. A parked radio whose position wanders stays on the slow interval. The first valid fix is sent immediately. Later fixes follow the interval. Tracker text is not TAK chat.
 
 ```mermaid
 stateDiagram-v2
   [*] --> Seek
   Seek --> Stationary: first valid fix sends now
   Seek --> Moving: first fix already moving sends now
-  Stationary --> Moving: speed or displacement sends now
+  Stationary --> Moving: speed says it is moving
   Moving --> Stationary: hold time elapsed sends now
   Moving --> Moving: moving interval
   Stationary --> Stationary: stationary interval

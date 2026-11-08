@@ -6,12 +6,13 @@
 #include "TrackerMessage.h"
 #include "TrackerMotion.h"
 
-static TrackerFix fixAt(double lat, double lon, float speed) {
+static TrackerFix fixAt(double lat, double lon, float speed, bool has_speed = false) {
   TrackerFix f;
   f.valid = true;
   f.lat = lat;
   f.lon = lon;
   f.speed_mps = speed;
+  f.has_speed = has_speed;
   return f;
 }
 
@@ -82,30 +83,50 @@ TEST(TrackerMotion, FirstFixSendsAndJitterStaysStill) {
 TEST(TrackerMotion, DisplacementAndSpeed) {
   TrackerMotion m;
   m.onFix(fixAt(36.0, -82.0, 0), 0);
-  TrackerDecision d = m.onFix(fixAt(northOf(36.0, 25), -82.0, 0), 2);
+  TrackerDecision d;
+  for (int i = 1; i <= 4; i++) {
+    d = m.onFix(fixAt(northOf(36.0, 25), -82.0, 0), i);
+    EXPECT_FALSE(d.send);
+    EXPECT_EQ(TrackerMotionState::Stationary, d.state);
+  }
+  d = m.onFix(fixAt(northOf(36.0, 25), -82.0, 0), 5);
   EXPECT_TRUE(d.send);
   EXPECT_EQ(TrackerMotionState::Moving, d.state);
   EXPECT_EQ(15, d.interval_s);
   EXPECT_EQ(30, d.stale_s);
 
   TrackerMotion speed;
-  speed.onFix(fixAt(36.0, -82.0, 0), 0);
-  d = speed.onFix(fixAt(36.0, -82.0, 2.0f), 1);
+  speed.onFix(fixAt(36.0, -82.0, 0, true), 0);
+  d = speed.onFix(fixAt(36.0, -82.0, 2.0f, true), 1);
   EXPECT_FALSE(d.send);
   EXPECT_EQ(TrackerMotionState::Stationary, d.state);
-  d = speed.onFix(fixAt(36.0, -82.0, 2.0f), 2);
+  d = speed.onFix(fixAt(36.0, -82.0, 2.0f, true), 2);
   EXPECT_TRUE(d.send);
   EXPECT_EQ(TrackerMotionState::Moving, d.state);
 }
 
+TEST(TrackerMotion, ParkedSpeedIgnoresGpsWander) {
+  TrackerMotion m;
+  m.onFix(fixAt(36.0, -82.0, 0, true), 0);
+  for (int i = 1; i <= 8; i++) {
+    TrackerDecision d = m.onFix(fixAt(northOf(36.0, 25), -82.0, 0.3f, true), i);
+    EXPECT_FALSE(d.send);
+    EXPECT_EQ(TrackerMotionState::Stationary, d.state);
+    EXPECT_EQ(300, d.interval_s);
+  }
+}
+
 TEST(TrackerMotion, StoplightHoldThenStationary) {
   TrackerMotion m;
-  m.onFix(fixAt(36.0, -82.0, 0), 0);
-  m.onFix(fixAt(northOf(36.0, 25), -82.0, 3.0f), 1);
-  TrackerDecision d = m.onFix(fixAt(northOf(36.0, 25), -82.0, 0), 10);
+  m.onFix(fixAt(36.0, -82.0, 0, true), 0);
+  m.onFix(fixAt(northOf(36.0, 25), -82.0, 3.0f, true), 1);
+  TrackerDecision d = m.onFix(fixAt(northOf(36.0, 25), -82.0, 3.0f, true), 2);
+  EXPECT_EQ(TrackerMotionState::Moving, d.state);
+  EXPECT_TRUE(d.send);
+  d = m.onFix(fixAt(northOf(36.0, 25), -82.0, 0, true), 10);
   EXPECT_EQ(TrackerMotionState::Moving, d.state);
   EXPECT_FALSE(d.send);
-  d = m.onFix(fixAt(northOf(36.0, 25), -82.0, 0), 31);
+  d = m.onFix(fixAt(northOf(36.0, 25), -82.0, 0, true), 32);
   EXPECT_TRUE(d.send);
   EXPECT_EQ(TrackerMotionState::Stationary, d.state);
   EXPECT_EQ(600, d.stale_s);

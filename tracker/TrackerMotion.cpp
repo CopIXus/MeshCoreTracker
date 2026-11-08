@@ -17,6 +17,7 @@ void TrackerMotion::reset() {
   _last_motion_s = 0;
   _last_sent_s = 0;
   _speed_run = 0;
+  _disp_run = 0;
   _have_sent = false;
 }
 
@@ -56,7 +57,8 @@ TrackerDecision TrackerMotion::onFix(const TrackerFix& fix, uint32_t now_s) {
     _state = TrackerMotionState::Stationary;
     _last_motion_s = now_s;
     _speed_run = 0;
-    bool fast = fix.speed_mps >= _cfg.move_speed_mps;
+    _disp_run = 0;
+    bool fast = fix.has_speed && fix.speed_mps >= _cfg.move_speed_mps;
     if (fast && _cfg.speed_samples <= 1) {
       _state = TrackerMotionState::Moving;
       _speed_run = 1;
@@ -78,22 +80,45 @@ TrackerDecision TrackerMotion::onFix(const TrackerFix& fix, uint32_t now_s) {
   double ref_lat = _state == TrackerMotionState::Moving ? _motion_lat : _anchor_lat;
   double ref_lon = _state == TrackerMotionState::Moving ? _motion_lon : _anchor_lon;
   double dist = distanceM(ref_lat, ref_lon, fix.lat, fix.lon);
-  bool disp = dist >= (double)_cfg.move_distance_m;
-  bool fast = fix.speed_mps >= _cfg.move_speed_mps;
-  if (disp) {
+  bool fast = fix.has_speed && fix.speed_mps >= _cfg.move_speed_mps;
+  if (!fix.has_speed) {
     _speed_run = 0;
   } else if (fast) {
     if (_speed_run < 255) _speed_run++;
   } else {
     _speed_run = 0;
   }
-  bool motion = disp || (_speed_run >= _cfg.speed_samples && fast);
+  bool speed_moving = fast && _speed_run >= _cfg.speed_samples;
+  // A parked receiver reports little speed while its position wanders. That wander
+  // must not start the fast schedule. A much larger shift still counts once.
+  double need_m = (double)_cfg.move_distance_m;
+  if (fix.has_speed && !fast) need_m *= 4.0;
+  bool far = dist >= need_m;
+  if (_state == TrackerMotionState::Stationary) {
+    if (far) {
+      if (_disp_run < 255) _disp_run++;
+    } else {
+      _disp_run = 0;
+    }
+  }
+  bool sustained = _disp_run >= _cfg.disp_samples && _cfg.disp_samples > 0;
+  bool motion = speed_moving;
+  if (!fix.has_speed) {
+    motion = _state == TrackerMotionState::Moving ? far : sustained;
+  }
 
   bool send_now = false;
-  if (motion) {
+  if (fix.has_speed && !fast && _state == TrackerMotionState::Stationary && sustained) {
+    _anchor_lat = fix.lat;
+    _anchor_lon = fix.lon;
+    _disp_run = 0;
+    _last_motion_s = now_s;
+    send_now = true;
+  } else if (motion) {
     _last_motion_s = now_s;
     _motion_lat = fix.lat;
     _motion_lon = fix.lon;
+    _disp_run = 0;
     if (_state != TrackerMotionState::Moving) {
       _state = TrackerMotionState::Moving;
       send_now = true;
