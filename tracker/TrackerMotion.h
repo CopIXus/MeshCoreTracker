@@ -9,6 +9,7 @@ struct TrackerFix {
   double lat;
   double lon;
   float speed_mps;
+  bool has_speed;
 };
 
 struct TrackerDecision {
@@ -38,6 +39,7 @@ private:
   uint32_t _last_motion_s;
   uint32_t _last_sent_s;
   uint8_t _speed_run;
+  uint8_t _disp_run;
   bool _have_sent;
 
   uint16_t staleFor(uint16_t interval_s) const;

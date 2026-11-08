@@ -13,6 +13,7 @@ struct TrackerMotionConfig {
   float stale_multiplier;
   uint16_t stale_min_s;
   uint8_t speed_samples;  // consecutive speed-only hits required before MOVING
+  uint8_t disp_samples;   // consecutive far fixes before a speed-less move counts
 };
 
 struct TrackerConfig {

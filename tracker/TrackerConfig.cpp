@@ -18,5 +18,6 @@ TrackerConfig trackerDefaults() {
   c.motion.stale_multiplier = 2.0f;
   c.motion.stale_min_s = 10;
   c.motion.speed_samples = 2;
+  c.motion.disp_samples = 5;
   return c;
 }
